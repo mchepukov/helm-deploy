@@ -30,12 +30,12 @@ esConfig:
 # Extra environment variables to append to this nodeGroup
 # This will be appended to the current 'env:' key. You can use any of the kubernetes env
 # syntax here
-extraEnvs:
-  - name: ELASTIC_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: elastic-config-credentials
-        key: password
+extraEnvs: []
+  # - name: ELASTIC_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: elastic-config-credentials
+  #       key: password
 # - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
