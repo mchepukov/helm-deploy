@@ -1,5 +1,5 @@
 ---
-clusterName: "iotans-elastic"
+clusterName: "elasticsearch"
 nodeGroup: "master"
 
 # The service that non master groups will try to connect to when joining the cluster
@@ -36,7 +36,7 @@ extraEnvs:
       secretKeyRef:
         name: elastic-config-credentials
         key: password
-#  - name: MY_ENVIRONMENT_VAR
+# - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
 # Allows you to load environment variables from kubernetes secret or config map
