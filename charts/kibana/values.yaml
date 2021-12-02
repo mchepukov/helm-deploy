@@ -9,6 +9,11 @@ replicas: 1
 extraEnvs:
   - name: "NODE_OPTIONS"
     value: "--max-old-space-size=1800"
+  - name: "KIBANA_ENCRYPTION_KEY"
+    valueFrom:
+      secretKeyRef:
+        name: kibana
+        key: encryptionkey
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
@@ -61,7 +66,10 @@ healthCheckPath: "/app/kibana"
 
 # Allows you to add any config files in /usr/share/kibana/config/
 # such as kibana.yml
-kibanaConfig: {}
+kibanaConfig:
+  kibana.yml: |
+      xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+
 #   kibana.yml: |
 #     key:
 #       nestedkey: value
