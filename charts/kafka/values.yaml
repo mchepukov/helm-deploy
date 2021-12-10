@@ -734,7 +734,10 @@ externalAccess:
     ##   - 30001
     ##   - 30002
     ##
-    nodePorts: []
+    nodePorts:
+      - 30001
+      - 30002
+      - 30003
     ## @param externalAccess.service.useHostIPs Use service host IPs to configure Kafka external listener when service type is NodePort
     ##
     useHostIPs: false
