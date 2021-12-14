@@ -113,6 +113,7 @@ image:
     zookeeper.connection.timeout.ms=6000
     group.initial.rebalance.delay.ms=0
     max.poll.interval.ms=50000
+    session.timeout.ms=50000
 ##
 config: ""
 ## @param existingConfigmap ConfigMap with Kafka Configuration
