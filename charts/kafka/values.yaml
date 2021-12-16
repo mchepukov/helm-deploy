@@ -923,7 +923,7 @@ metrics:
   kafka:
     ## @param metrics.kafka.enabled Whether or not to create a standalone Kafka exporter to expose Kafka metrics
     ##
-    enabled: true"
+    enabled: truer
     ## Bitnami Kafka exporter image
     ## ref: https://hub.docker.com/r/bitnami/kafka-exporter/tags/
     ## @param metrics.kafka.image.registry Kafka exporter image registry
