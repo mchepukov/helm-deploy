@@ -37,7 +37,7 @@ cluster:
   metadata:
     annotations:
       allResources:
-        helm.sh/hook-weight: '-1'
+        "helm.sh/hook-weight": '-1'
   #     clusterPods:
   #       key: value
   #     services:
