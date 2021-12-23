@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-wait"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: stackgres-operator
+    scope: cleanup
+    job: wait
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weigth": "100"
+spec:
+  template:
+    metadata:
+      labels:
+        app: stackgres-operator
+        scope: cleanup
+        job: wait
+    spec:
+      serviceAccountName: {{ .Release.Name }}-init
+      containers:
+      - name: "{{ .Release.Name }}-wait"
+      {{- if semverCompare ">=1.22" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- else if semverCompare ">=1.19" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.20.11-build-6.7"
+      {{- else if semverCompare ">=1.16" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.17.17-build-6.7"
+      {{- else }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- end }}
+        imagePullPolicy: "IfNotPresent"
+        command:
+          - "/bin/bash"
+          - "-ecx"
+          - |
+            kubectl wait job -n '{{ .Release.Namespace }}' -l app=stackgres-operator,scope=init --for condition=Complete
+            kubectl scale --timeout 1h --replicas 1 -n '{{ .Release.Namespace }}' 'deployment/{{ .Release.Name }}'
+            {{- if and .Values.deploy.restapi }}
+            kubectl scale --timeout 1h --replicas 1 -n '{{ .Release.Namespace }}' 'deployment/{{ .Values.restapi.name }}'
+            {{- end }}
+            kubectl rollout status -n '{{ .Release.Namespace }}' 'deployment/{{ .Release.Name }}'
+            {{- if and .Values.deploy.restapi }}
+            kubectl rollout status -n '{{ .Release.Namespace }}' 'deployment/{{ .Values.restapi.name }}'
+            {{- end }}
+            {{- if .Values.extensions.cache.enabled }}
+            kubectl rollout status -n '{{ .Release.Namespace }}' 'statefulset/{{ .Release.Name }}-extensions-cache'
+            {{- end }}
+      restartPolicy: OnFailure

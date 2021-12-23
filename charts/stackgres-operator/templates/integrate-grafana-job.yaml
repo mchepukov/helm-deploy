@@ -1,0 +1,114 @@
+{{- if .Values.grafana.autoEmbed }}
+{{- if .Values.qutePreprocess }}#grafana.preprocess.start{{- end}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: "{{ .Release.Name }}-integrate-grafana"
+  labels:
+    app: stackgres-operator
+    scope: init
+    job: integrate-grafana
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+spec:
+  template:
+    metadata:
+      labels:
+        app: stackgres-operator
+        scope: init
+        job: integrate-grafana
+    spec:
+      serviceAccountName: {{ .Release.Name }}-init
+      containers:
+      - name: "integrate-grafana"
+      {{- if semverCompare ">=1.22" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- else if semverCompare ">=1.19" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.20.11-build-6.7"
+      {{- else if semverCompare ">=1.16" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.17.17-build-6.7"
+      {{- else }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- end }}
+        imagePullPolicy: "IfNotPresent"
+        command:
+          - "/bin/bash"
+          - "-ecx"
+          - |
+            {{- if and .Values.grafana.secretNamespace .Values.grafana.secretName .Values.grafana.secretUserKey .Values.grafana.secretPasswordKey }}
+            GRAFANA_CREDENTIALS="$(kubectl get secret -n '{{ .Values.grafana.secretNamespace }}' '{{ .Values.grafana.secretName }}' \
+              --template '{{ `{{` }} printf `%s:%s` (index .data `{{ .Values.grafana.secretUserKey }}` | base64decode) (index .data `{{ .Values.grafana.secretPasswordKey }}` | base64decode) {{ `}}` }}' \
+              )"
+            {{- else }}
+            GRAFANA_CREDENTIALS="{{ .Values.grafana.user }}:{{ .Values.grafana.password }}"
+            {{- end }}
+            {{- if .Values.grafana.webHost }}
+            GRAFANA_HOST="{{ .Values.grafana.schema }}://{{ .Values.grafana.webHost }}"
+            {{- else }}
+            GRAFANA_HOST="{{ .Values.grafana.schema }}://{{ .Release.Name }}-grafana"
+            {{- end }}
+            curl_grafana_api() {
+              curl -svk -H "Accept: application/json" -H "Content-Type: application/json" --user "$GRAFANA_CREDENTIALS" --fail "$@"
+            }
+            {{- if .Values.grafana.dashboardId }}
+            DASHBOARD_ID="{{ .Values.grafana.dashboardId }}"
+            curl_grafana_api "$GRAFANA_HOST/api/gnet/dashboards/$DASHBOARD_ID" | jq .json > /tmp/grafana-dashboard.json
+            [ -s /tmp/grafana-dashboard.json ]
+            {{- end }}
+            GRAFANA_PROMETHEUS_DATASOURCE_NAME="{{ .Values.grafana.datasourceName }}"
+            cat << EOF > /tmp/grafana-dashboard-import.json
+            {
+              {{- if .Values.grafana.dashboardId }}
+              "dashboard": $(cat /tmp/grafana-dashboard.json | jq .),
+              {{- else }}
+              "dashboard": $(cat /etc/grafana/grafana-dashboard.json | jq .),
+              {{- end }}
+              "overwrite": true,
+              "inputs": [{
+                "name": "DS_PROMETHEUS",
+                "type": "datasource",
+                "pluginId": "prometheus",
+                "value": "$GRAFANA_PROMETHEUS_DATASOURCE_NAME"
+              }],
+              "folderId": -1
+            }
+            EOF
+            GRAFANA_DASHBOARD_URL="$(curl_grafana_api -d "@/tmp/grafana-dashboard-import.json" "$GRAFANA_HOST/api/dashboards/import" | jq -M -r .importedUrl)"
+            [ -n "$GRAFANA_DASHBOARD_URL" ]
+            GRAFANA_API_KEY_ID="$(curl_grafana_api "$GRAFANA_HOST/api/auth/keys" | jq -r '.[]|select(.name == "stackgres")|.id|select(.!=null)')"
+            [ -z "$GRAFANA_API_KEY_ID" ] || curl_grafana_api -X DELETE "$GRAFANA_HOST/api/auth/keys/$GRAFANA_API_KEY_ID" > /dev/null
+            GRAFANA_API_KEY_TOKEN="$(curl_grafana_api -d '{"name":"stackgres", "role": "Viewer"}' "$GRAFANA_HOST/api/auth/keys" | jq -r .key)"
+            [ -n "$GRAFANA_API_KEY_TOKEN" ]
+            kubectl set env -n {{ .Release.Namespace }} deployment/{{ .Values.restapi.name }} \
+              GRAFANA_EMBEDDED=true \
+              GRAFANA_URL_PATH="$GRAFANA_DASHBOARD_URL" \
+              GRAFANA_SCHEMA="{{ .Values.grafana.schema }}" \
+              {{- if .Values.grafana.webHost }}
+              GRAFANA_WEB_HOST="{{ .Values.grafana.webHost }}" \
+              {{- else }}
+              GRAFANA_WEB_HOST="{{ .Release.Name }}-grafana" \
+              {{- end }}
+              GRAFANA_TOKEN="$GRAFANA_API_KEY_TOKEN"
+        {{- if not .Values.grafana.dashboardId }}
+        volumeMounts:
+        - name: grafana-dashboard
+          mountPath: /etc/grafana/grafana-dashboard.json
+          readOnly: true
+          subPath: grafana-dashboard.json
+        {{- end }}
+      {{- if not .Values.grafana.dashboardId }}
+      volumes:
+        - name: grafana-dashboard
+          configMap:
+            {{- if .Values.grafana.dashboardConfigMap }}
+            name: {{ .Values.grafana.dashboardConfigMap }}
+            {{- else }}
+            name: {{ .Release.Name }}-grafana-dashboard
+            {{- end }}
+      {{- end }}
+      restartPolicy: OnFailure
+{{- if .Values.qutePreprocess }}#grafana.preprocess.end{{- end}}
+{{ end }}

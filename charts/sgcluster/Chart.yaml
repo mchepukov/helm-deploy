@@ -1,0 +1,14 @@
+apiVersion: v2
+appVersion: 1.0.0-beta3
+description: StackGres Cluster
+home: https://stackgres.io
+icon: https://assets.gitlab-static.net/uploads/-/system/project/avatar/12584701/logo-stackgres.png?width=64
+kubeVersion: 1.16.0-0 - 1.21.x-0
+maintainers:
+- email: info@ongres.com
+  name: OnGres Inc.
+  url: https://ongres.com
+name: stackgres-cluster
+sources:
+- https://gitlab.com/ongresinc/stackgres
+version: 1.0.0-beta3

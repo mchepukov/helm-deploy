@@ -1,0 +1,205 @@
+{{ if and (or (not .Values.cert.key) (not .Values.cert.crt) (not .Values.cert.webKey) (not .Values.cert.webCrt)) ( or .Values.deploy.operator .Values.deploy.restapi ) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-create-certificate"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: "{{ .Release.Name }}-create-certificate"
+    scope: init
+    job: create-certificate
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+spec:
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-create-certificate"
+        scope: init
+        job: create-certificate
+    spec:
+      serviceAccountName: {{ .Release.Name }}-init
+      containers:
+      - name: "{{ .Release.Name }}-create-certificate"
+      {{- if semverCompare ">=1.22" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- else if semverCompare ">=1.19" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.20.11-build-6.7"
+      {{- else if semverCompare ">=1.16" .Capabilities.KubeVersion.Version }}
+        image: "ongres/kubectl:v1.17.17-build-6.7"
+      {{- else }}
+        image: "ongres/kubectl:v1.22.2-build-6.7"
+      {{- end }}
+        imagePullPolicy: "IfNotPresent"
+        command:
+          - "/bin/bash"
+          - "-ecx"
+          - |
+            {{- if or (not .Values.cert.key) (not .Values.cert.crt) }}
+            kubectl delete csr --ignore-not-found '{{ .Release.Name }}'
+            cat << EOF > /tmp/csr.conf
+            [req]
+            req_extensions = v3_req
+            distinguished_name = req_distinguished_name
+            [req_distinguished_name]
+            [ v3_req ]
+            basicConstraints = CA:FALSE
+            keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+            extendedKeyUsage = serverAuth
+            subjectAltName = @alt_names
+            [alt_names]
+            DNS.1 = {{ .Release.Name }}
+            DNS.2 = {{ .Release.Name }}.{{ .Release.Namespace }}
+            DNS.3 = {{ .Release.Name }}.{{ .Release.Namespace }}.svc
+            DNS.4 = {{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local
+            EOF
+
+            K8S_VERSION="$(kubectl get node --template '{{ "{{ (index .items 0).status.nodeInfo.kubeletVersion }}" }}')"
+            K8S_VERSION="${K8S_VERSION#v}"
+
+            if [ "$(echo "$K8S_VERSION" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" \
+              -ge "$(echo "1.21.0" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" ]
+            then
+              openssl req -new -nodes -text -keyout /tmp/root.key \
+                  -subj "/CN=system:node:{{ .Release.Name }}.{{ .Release.Namespace }};/O=system:nodes" \
+                  -out /tmp/server.csr \
+                  -config /tmp/csr.conf
+            else
+              openssl req -new -nodes -text -keyout /tmp/root.key \
+                  -subj "/CN={{ .Release.Name }}.{{ .Release.Namespace }}" \
+                  -out /tmp/server.csr \
+                  -config /tmp/csr.conf
+            fi
+            openssl rsa -in /tmp/root.key -pubout -out /tmp/root.pem
+
+            cat << EOF | kubectl create -f -
+            $(
+            if [ "$(echo "$K8S_VERSION" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" \
+              -ge "$(echo "1.21.0" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" ]
+            then
+              echo "apiVersion: certificates.k8s.io/v1"
+            else
+              echo "apiVersion: certificates.k8s.io/v1beta1"
+            fi
+            )
+            kind: CertificateSigningRequest
+            metadata:
+              name: {{ .Release.Name }}
+            spec:
+              request: "$(cat /tmp/server.csr | base64 | tr -d '\n')"
+              usages:
+              - digital signature
+              - key encipherment
+              - server auth
+            $(
+            if [ "$(echo "$K8S_VERSION" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" \
+              -ge "$(echo "1.21.0" | tr . '\n' \
+                | while read NUMBER; do printf '%05d' "$NUMBER"; done)" ]
+            then
+              echo "  signerName: kubernetes.io/kubelet-serving"
+            fi
+            )
+            EOF
+
+            if ! kubectl get csr '{{ .Release.Name }}' -o yaml|grep -q '^    type: Approved$'
+            then
+              {{- if .Values.cert.autoapprove }}
+              kubectl certificate approve '{{ .Release.Name }}'
+              {{- end }}
+              echo -n "Waiting for CSR approval..."
+              until kubectl get csr '{{ .Release.Name }}' -o yaml|grep -q '^    type: Approved$'
+              do
+                echo -n .
+                sleep 5
+              done
+              echo "approved"
+            fi
+            echo -n "Waiting for CSR certificate generation..."
+            until kubectl get csr '{{ .Release.Name }}' \
+              --template '{{ "{{ if .status }}{{ if .status.certificate }}true{{ end }}{{ end }}" }}' \
+              | grep -q '^true$'
+            do
+              echo -n .
+              sleep 5
+            done
+            echo "certificate generated"
+
+            KEY="$(cat /tmp/root.key | base64 | tr -d '\n')"
+            PUB="$(cat /tmp/root.pem | base64 | tr -d '\n')"
+            CRT="$(kubectl get csr '{{ .Release.Name }}' --template '{{ "{{ .status.certificate }}" }}')"
+
+            if [ -z "$CRT" ]
+            then
+              echo "Certificate not found in CSR!"
+              exit 1
+            fi
+
+            {{- $_ := set .Values.cert "crt" "${CRT}" }}
+            {{- $_ := set .Values.cert "key" "${KEY}" }}
+            cat << EOF > /tmp/validating-webhook-configuration.yaml
+            {{- include (print $.Template.BasePath "/validating-webhook-configuration.yaml") . | indent 12 }}
+            EOF
+            cat << EOF > /tmp/mutating-webhook-configuration.yaml
+            {{- include (print $.Template.BasePath "/mutating-webhook-configuration.yaml") . | indent 12 }}
+            EOF
+            cat << EOF > /tmp/certificate-secret.yaml
+            {{- include (print $.Template.BasePath "/certificate-secret.yaml") . | indent 12 }}
+            EOF
+            {{- $_ := set .Values.cert "crt" nil }}
+            {{- $_ := set .Values.cert "key" nil }}
+
+            kubectl apply -f /tmp/validating-webhook-configuration.yaml
+            kubectl apply -f /tmp/mutating-webhook-configuration.yaml
+            kubectl apply -f /tmp/certificate-secret.yaml
+            {{- end }}
+            {{- if or (not .Values.cert.webKey) (not .Values.cert.webCrt) }}
+            cat << EOF > /tmp/csr-web.conf
+            [req]
+            req_extensions = v3_req
+            distinguished_name = req_distinguished_name
+            [req_distinguished_name]
+            [ v3_req ]
+            basicConstraints = CA:FALSE
+            keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+            extendedKeyUsage = serverAuth
+            subjectAltName = @alt_names
+            [alt_names]
+            DNS.1 = {{ .Values.restapi.name  }}
+            DNS.2 = {{ .Values.restapi.name  }}.{{ .Release.Namespace }}
+            DNS.3 = {{ .Values.restapi.name  }}.{{ .Release.Namespace }}.svc
+            DNS.4 = {{ .Values.restapi.name  }}.{{ .Release.Namespace }}.svc.cluster.local
+            EOF
+
+            openssl req -new -nodes -text -keyout /tmp/web.key \
+                -subj "/CN={{ .Values.restapi.name  }}.{{ .Release.Namespace }}" \
+                -out /tmp/server-web.csr \
+                -config /tmp/csr-web.conf
+            openssl rsa -in /tmp/web.key -pubout -out /tmp/web.pem
+            openssl x509 -signkey /tmp/web.key -in /tmp/server-web.csr \
+              -req -days 365 -out /tmp/server-web.crt
+            WEB_KEY="$(cat /tmp/web.key | base64 | tr -d '\n')"
+            WEB_PUB="$(cat /tmp/web.pem | base64 | tr -d '\n')"
+            WEB_CRT="$(cat /tmp/server-web.crt | base64 | tr -d '\n')"
+            {{- $_ := set .Values.cert "webCrt" "${WEB_CRT}" }}
+            {{- $_ := set .Values.cert "webKey" "${WEB_KEY}" }}
+            {{- $_ := set .Values.cert "jwtRsaKey" "${WEB_KEY}" }}
+            {{- $_ := set .Values.cert "jwtRsaPub" "${WEB_PUB}" }}
+            cat << EOF > /tmp/web-certificate-secret.yaml
+            {{- include (print $.Template.BasePath "/web-certificate-secret.yaml") . | indent 12 }}
+            EOF
+            {{- $_ := set .Values.cert "webCrt" nil }}
+            {{- $_ := set .Values.cert "webKey" nil }}
+            {{- $_ := set .Values.cert "jwtRsaKey" nil }}
+            {{- $_ := set .Values.cert "jwtRsaPub" nil }}
+
+            kubectl apply -f /tmp/web-certificate-secret.yaml
+            {{- end }}
+      restartPolicy: OnFailure
+{{ end }}

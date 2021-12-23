@@ -1,0 +1,53 @@
+restapi:
+  name: stackgres-restapi
+jobs:
+  name: stackgres-jobs
+adminui:
+  name: stackgres-adminui
+  service:
+    exposeHTTP: false
+    # Set to LoadBalancer to expose admin UI with a load balancer
+    # Set to NodePort to expose admin UI from kubernetes nodes
+    type: NodePort
+    # LoadBalancer will get created with the IP specified in this field.
+    # This feature depends on whether the underlying cloud-provider supports
+    # specifying the loadBalancerIP when a load balancer is created. This field
+    # will be ignored if the cloud-provider does not support the feature.
+    # loadBalancerIP:
+    # If specified and supported by the platform, this will restrict traffic
+    # through the cloud-provider load-balancer will be restricted to the
+    # specified client IPs. This field will be ignored if the cloud-provider does
+    # not support the feature.
+    # More info: https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/
+    # loadBalancerSourceRanges:
+    # The port used to expose the service on kubernetes nodes
+    # nodePort:
+    # nodePortHTTP:
+
+serviceAccount:
+  create: true
+
+initClusterRole: cluster-admin
+
+rbac:
+  create: true
+
+deploy:
+  operator: true
+  restapi: true
+
+cert:
+  autoapprove: true
+
+# Custom credentials for the operator's admin user
+authentication:
+  user: admin
+#  password: <operator admin password>
+
+prometheus:
+  allowAutobind: true
+
+extensions:
+  repositoryUrls:
+  - https://extensions.stackgres.io/postgres/repository
+

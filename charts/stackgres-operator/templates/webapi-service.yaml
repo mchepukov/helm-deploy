@@ -1,0 +1,43 @@
+{{- if .Values.deploy.restapi }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.restapi.name  }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: '{{ .Values.adminui.service.type }}'
+  {{- with .Values.adminui.service.loadBalancerIP }}
+  loadBalancerIP: "{{ . }}"
+  {{- end }}
+  {{- with .Values.adminui.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range . }}
+    - "{{ . }}"
+    {{- end }}
+  {{- end }}
+  selector:
+    app: {{ .Values.restapi.name }}
+  ports:
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+      {{- with .Values.adminui.service.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+  {{- if .Values.adminui.service.exposeHTTP }}
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+      {{- with .Values.adminui.service.nodePortHTTP }}
+      nodePort: {{ . }}
+      {{- end }}
+  {{- end }}
+{{- end }}
