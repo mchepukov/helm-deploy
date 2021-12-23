@@ -85,6 +85,7 @@ cluster:
     sgDistributedLogs: distributedlogs
     retention: 7 days
 
+  cluster.metadata.annotations.allResources: "helm.sh/hook = weight: -1"
 #  initialData:
 #    scripts:
 #      - name: create-superuser
