@@ -34,10 +34,10 @@ cluster:
     replicas:
       enabled: true
       type: NodePort
-  # metadata:
-  #   annotations:
-  #     allResources:
-  #       key: value
+  metadata:
+    annotations:
+      allResources:
+        helm.sh/hook: "weight: -1"
   #     clusterPods:
   #       key: value
   #     services:
@@ -85,7 +85,6 @@ cluster:
     sgDistributedLogs: distributedlogs
     retention: 7 days
 
-  annotations.allResources: "helm.sh/hook = weight: -1"
 #  initialData:
 #    scripts:
 #      - name: create-superuser
