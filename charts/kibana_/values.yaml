@@ -6,9 +6,14 @@ replicas: 1
 # Extra environment variables to append to this nodeGroup
 # This will be appended to the current 'env:' key. You can use any of the kubernetes env
 # syntax here
-extraEnvs:
-  - name: "NODE_OPTIONS"
-    value: "--max-old-space-size=1800"
+extraEnvs: []
+  # - name: "NODE_OPTIONS"
+  #   value: "--max-old-space-size=1800"
+  # - name: "KIBANA_ENCRYPTION_KEY"
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: kibana
+  #       key: encryptionkey
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
@@ -35,7 +40,7 @@ hostAliases: []
 #  - "bar.local"
 
 image: "docker.elastic.co/kibana/kibana"
-imageTag: "7.16.2"
+imageTag: "7.15.0"
 imagePullPolicy: "IfNotPresent"
 
 # additionals labels
@@ -62,6 +67,9 @@ healthCheckPath: "/app/kibana"
 # Allows you to add any config files in /usr/share/kibana/config/
 # such as kibana.yml
 kibanaConfig: {}
+  # kibana.yml: |
+  #     xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+
 #   kibana.yml: |
 #     key:
 #       nestedkey: value
@@ -80,9 +88,6 @@ securityContext:
   runAsUser: 1000
 
 serviceAccount: ""
-
-# Whether or not to automount the service account token in the pod. Normally, Kibana does not need this
-automountToken: true
 
 # This is the PriorityClass settings as defined in
 # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
@@ -134,16 +139,15 @@ service:
 
 ingress:
   enabled: false
-  className: "nginx"
-  pathtype: ImplementationSpecific
-  annotations: {}
-  # kubernetes.io/ingress.class: nginx
-  # kubernetes.io/tls-acme: "true"
+  annotations:
+    {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: kibana-example.local
+    - host: chart-example.local
       paths:
         - path: /
-  #tls: []
+  tls: []
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
