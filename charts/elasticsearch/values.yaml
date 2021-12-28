@@ -94,9 +94,10 @@ networkHost: "0.0.0.0"
 
 volumeClaimTemplate:
   accessModes: ["ReadWriteOnce"]
+  storageClassName: "openebs-hostpath"
   resources:
     requests:
-      storage: 30Gi
+      storage: 5Gi
 
 rbac:
   create: false
