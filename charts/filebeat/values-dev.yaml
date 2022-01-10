@@ -27,11 +27,6 @@ daemonset:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
 
-      output.elasticsearch:
-        hosts: ['${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}']
-        username: ${ELASTICSEARCH_USERNAME}
-        password: ${ELASTICSEARCH_PASSWORD}
-
       setup.dashboards.enabled: true
       setup.kibana:
         host: 'kibana-kibana:5601'
