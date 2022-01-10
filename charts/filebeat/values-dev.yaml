@@ -26,9 +26,9 @@ daemonset:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
 
-      # setup.dashboards.enabled: true
-      # setup.kibana:
-      #   host: 'kibana-kibana:5601'
+      setup.dashboards.enabled: true
+      setup.kibana:
+        host: 'kibana-kibana:5601'
 
   tolerations:
     - operator: "Exists"
