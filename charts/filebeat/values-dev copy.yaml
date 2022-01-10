@@ -4,13 +4,30 @@ daemonset:
   filebeatConfig:
     filebeat.yml: |
       filebeat.modules:
-        - module: system
-          syslog:
-            enabled: true
-            var.paths: ["/var/log/syslog"]
-          auth:
-            enabled: false
-            var.paths: ["/var/log/auth"]
+      - module: system
+        syslog:
+          enabled: true
+          var.paths: ["/var/log/syslog"]
+        auth:
+          enabled: false
+          var.paths: ["/var/log/auth"]
+
+      - module: elasticsearch
+        server:
+          enabled: true
+          var.paths: ["/var/log/containers/*elasticsearch*.log"]
+        gc:
+          enabled: true
+          var.paths: ["/var/log/containers/*elasticsearch*.log"]
+        audit:
+          enabled: true
+          var.paths: ["/var/log/containers/*elasticsearch*.log"]
+        slowlog:
+          enabled: true
+          var.paths: ["/var/log/containers/*elasticsearch*.log"]
+        deprecation:
+          enabled: true
+          var.paths: ["/var/log/containers/*elasticsearch*.log"]
 
       filebeat.inputs:
       - type: container
@@ -27,9 +44,8 @@ daemonset:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
 
-      # setup.dashboards.enabled: true
-      # setup.kibana:
-      #   host: 'kibana-kibana:5601'
+      setup.kibana:
+        host: 'kibana-kibana:5601'
 
   tolerations:
     - operator: "Exists"
