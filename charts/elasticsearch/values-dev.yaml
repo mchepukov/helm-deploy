@@ -26,6 +26,7 @@ esConfig:
   elasticsearch.yml: |
     xpack.security.enabled: false
     xpack.security.transport.ssl.enabled: true
+    xpack.monitoring.collection.enabled: true
 
 # Extra environment variables to append to this nodeGroup
 # This will be appended to the current 'env:' key. You can use any of the kubernetes env
