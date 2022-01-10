@@ -23,7 +23,6 @@ daemonset:
                 - /var/log/containers/*${data.kubernetes.container.id}.log
 
       processors:
-        - add_cloud_metadata:
         - add_host_metadata:
 
       output.elasticsearch:
