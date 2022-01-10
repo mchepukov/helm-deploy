@@ -21,13 +21,21 @@ daemonset:
               type: container
               paths:
                 - /var/log/containers/*${data.kubernetes.container.id}.log
-
       processors:
-        - add_kubernetes_metadata:
+        - drop_event:
+            when:
+              or:
+                - equals:
+                    "kubernetes.labels.app_kubernetes_io/name": "kubernetes-dashboard"
+                - equals:
+                    "kubernetes.labels.app": "kibana"
+
 
       output.elasticsearch:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
+
+
 
       setup.dashboards.enabled: true
       setup.kibana:
