@@ -19,8 +19,6 @@ daemonset:
             enabled: true
             var.paths: ["/var/log/auth"]
 
-        - module: elasticsearch
-
       filebeat.autodiscover:
         providers:
           - type: kubernetes
