@@ -39,7 +39,8 @@ imageTag: "7.16.2"
 imagePullPolicy: "IfNotPresent"
 
 # additionals labels
-labels: {}
+labels:
+  co.elastic.logs/module: kibana
 
 podAnnotations:
   {}
