@@ -36,6 +36,13 @@ daemonset:
                     "kubernetes.labels.k8s-app": "calico-node"
                 - regexp:
                     "message": "INFO"
+        - drop_event:
+            when:
+              and:
+                - equals:
+                    "kubernetes.labels.app": "logging-filebeat"
+                - regexp:
+                    "message": "INFO"
 
 
       output.elasticsearch:
