@@ -58,7 +58,7 @@ daemonset:
                       input:
                         type: container
                         paths:
-                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
       processors:
         - drop_event:
             when:
