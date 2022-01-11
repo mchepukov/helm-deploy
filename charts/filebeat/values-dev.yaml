@@ -31,7 +31,7 @@ daemonset:
             templates:
               - condition:
                   contains:
-                    docker.container.image: elasticsearch
+                    kubernetes.container.image: elasticsearch
                 config:
                   - module: elasticsearch
                     audit:
