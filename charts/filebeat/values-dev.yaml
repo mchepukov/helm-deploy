@@ -28,6 +28,37 @@ daemonset:
               type: container
               paths:
                 - /var/log/containers/*${data.kubernetes.container.id}.log
+            templates:
+              - condition:
+                contains:
+                  docker.container.image: elasticsearch
+                config:
+                  - module: elasticsearch
+                    audit:
+                      input:
+                        type: container
+                        paths:
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
+                    deprecation:
+                      input:
+                        type: container
+                        paths:
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
+                    gc:
+                      input:
+                        type: container
+                        paths:
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
+                    server:
+                      input:
+                        type: container
+                        paths:
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
+                    slowlog:
+                      input:
+                        type: container
+                        paths:
+                          - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log
       processors:
         - drop_event:
             when:
