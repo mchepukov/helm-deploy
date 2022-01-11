@@ -3,6 +3,13 @@ daemonset:
   # such as filebeat.yml for daemonset
   filebeatConfig:
     filebeat.yml: |
+      setup.template.settings:
+        index.number_of_shards: 1
+
+      setup.dashboards.enabled: true
+      setup.kibana:
+        host: 'kibana-kibana:5601'
+        
       filebeat.modules:
         - module: system
           syslog:
@@ -53,13 +60,10 @@ daemonset:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
         indices:
-          - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
+          - index: "filebeat-%{[agent.version]}-%{[event.module:other]}-%{+yyyy.MM.dd}"
+            when.equals:
+              event.module: "system"
       
-      setup.dashboards.enabled: true
-      setup.kibana:
-        host: 'kibana-kibana:5601'
-        
-
   tolerations:
     - operator: "Exists"
 
