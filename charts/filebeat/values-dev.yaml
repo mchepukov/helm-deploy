@@ -57,48 +57,14 @@ daemonset:
                 - regexp:
                     "message": "INFO"
 
-        - add_docker_metadata: ~
-
 
       output.elasticsearch:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
-        indices:
-          - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
-            when.equals:
-              event.module: "system"
-        pipelines:
-          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-server-pipeline"
-            when:
-              and:
-                - equals:  2️⃣
-                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
-                - contains:  3️⃣
-                    message: '"type": "server"'
-          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-deprecation-pipeline"
-            when:
-              and:
-                - equals:
-                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
-                - contains:
-                    message: '"type": "deprecation"'
-          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-audit-pipeline"
-            when:
-              and:
-                - equals:
-                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
-                - contains:
-                    message: '"type": "audit"'
-          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-slowlog-pipeline"
-            when:
-              and:
-                - equals:
-                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
-                - contains:  4️⃣
-                    message: '_slowlog'
-          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-gc-pipeline"
-            when.equals:  5️⃣
-              container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
+        # indices:
+        #   - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
+        #     when.equals:
+        #       event.module: "system"
       
   tolerations:
     - operator: "Exists"
