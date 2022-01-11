@@ -22,7 +22,6 @@ daemonset:
       filebeat.autodiscover:
         providers:
           - type: kubernetes
-            node: ${NODE_NAME}
             hints.enabled: true
             hints.default_config:
               type: container
@@ -68,6 +67,19 @@ daemonset:
                       paths:
                         - /var/log/containers/*-${data.kubernetes.container.id}.log
                       exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+                      
+                - condition:
+                    equals:
+                      kubernetes.container.image: "redis"
+                  config:
+                    - module: redis
+                      log:
+                        input:
+                          type: container
+                          paths:
+                            - /var/log/containers/*-${data.kubernetes.container.id}.log
+
+                
       processors:
         - drop_event:
             when:
