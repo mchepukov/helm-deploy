@@ -18,7 +18,7 @@ daemonset:
           auth:
             enabled: true
             var.paths: ["/var/log/auth"]
-            
+
         - module: elasticsearch
 
       filebeat.autodiscover:
@@ -57,6 +57,8 @@ daemonset:
                 - regexp:
                     "message": "INFO"
 
+        - add_docker_metadata: ~
+
 
       output.elasticsearch:
         host: '${NODE_NAME}'
@@ -65,12 +67,38 @@ daemonset:
           - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
             when.equals:
               event.module: "system"
-          - index: "warning-%{[agent.version]}-%{+yyyy.MM.dd}"
-            when.contains:
-              message: "WARN"
-          - index: "error-%{[agent.version]}-%{+yyyy.MM.dd}"
-            when.contains:
-              message: "ERR"
+        pipelines:
+          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-server-pipeline"
+            when:
+              and:
+                - equals:  2️⃣
+                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
+                - contains:  3️⃣
+                    message: '"type": "server"'
+          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-deprecation-pipeline"
+            when:
+              and:
+                - equals:
+                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
+                - contains:
+                    message: '"type": "deprecation"'
+          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-audit-pipeline"
+            when:
+              and:
+                - equals:
+                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
+                - contains:
+                    message: '"type": "audit"'
+          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-slowlog-pipeline"
+            when:
+              and:
+                - equals:
+                    container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
+                - contains:  4️⃣
+                    message: '_slowlog'
+          - pipeline: "filebeat-%{[agent.version]}-elasticsearch-gc-pipeline"
+            when.equals:  5️⃣
+              container.labels.org_label-schema_url: "https://www.elastic.co/products/elasticsearch"
       
   tolerations:
     - operator: "Exists"
