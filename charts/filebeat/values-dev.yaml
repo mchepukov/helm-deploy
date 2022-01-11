@@ -44,7 +44,7 @@ daemonset:
             when:
               and:
                 - equals:
-                    "kubernetes.container.name": "logging-filebeat"
+                    "kubernetes.container.name": "filebeat"
                 - regexp:
                     "message": "INFO"
 
