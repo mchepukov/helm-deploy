@@ -18,6 +18,7 @@ daemonset:
           auth:
             enabled: true
             var.paths: ["/var/log/auth"]
+            
         - module: elasticsearch
 
       filebeat.autodiscover:
