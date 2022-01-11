@@ -30,8 +30,8 @@ daemonset:
                 - /var/log/containers/*${data.kubernetes.container.id}.log
             templates:
               - condition:
-                contains:
-                  docker.container.image: elasticsearch
+                  contains:
+                    docker.container.image: elasticsearch
                 config:
                   - module: elasticsearch
                     audit:
