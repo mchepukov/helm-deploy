@@ -30,12 +30,12 @@ daemonset:
                 - equals:
                     "kubernetes.labels.app": "kibana"
         - drop_event:
-          when:
-            and:
-              - equals:
-                  "kubernetes.labels.k8s-app": "calico"
-              - regexp:
-                  "message": "INFO"
+            when:
+              and:
+                - equals:
+                    "kubernetes.labels.k8s-app": "calico"
+                - regexp:
+                    "message": "INFO"
 
 
       output.elasticsearch:
