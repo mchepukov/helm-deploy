@@ -59,6 +59,15 @@ daemonset:
                         type: container
                         paths:
                           - "/var/lib/docker/containers/${data.kubernetes.container.id}/*.log"
+
+                - condition:
+                    equals:
+                      kubernetes.namespace: kube-system
+                  config:
+                    - type: container
+                      paths:
+                        - /var/log/containers/*-${data.kubernetes.container.id}.log
+                      exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
       processors:
         - drop_event:
             when:
