@@ -52,12 +52,13 @@ daemonset:
       output.elasticsearch:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
-
-
+        indices:
+          - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
 
       setup.dashboards.enabled: true
       setup.kibana:
         host: 'kibana-kibana:5601'
+        
 
   tolerations:
     - operator: "Exists"
