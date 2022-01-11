@@ -33,7 +33,7 @@ daemonset:
             when:
               and:
                 - equals:
-                    "kubernetes.labels.k8s-app": "calico"
+                    "kubernetes.labels.k8s-app": "calico-node"
                 - regexp:
                     "message": "INFO"
 
