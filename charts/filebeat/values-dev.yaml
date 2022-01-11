@@ -61,9 +61,15 @@ daemonset:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
         indices:
-          - index: "filebeat-%{[agent.version]}-%{[event.module:other]}-%{+yyyy.MM.dd}"
+          - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
             when.equals:
               event.module: "system"
+          - index: "warning-%{[agent.version]}-%{+yyyy.MM.dd}"
+            when.contains:
+              message: "WARN"
+          - index: "error-%{[agent.version]}-%{+yyyy.MM.dd}"
+            when.contains:
+              message: "ERR"
       
   tolerations:
     - operator: "Exists"
