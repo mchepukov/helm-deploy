@@ -9,7 +9,7 @@ daemonset:
             enabled: true
             var.paths: ["/var/log/syslog"]
           auth:
-            enabled: false
+            enabled: true
             var.paths: ["/var/log/auth"]
 
       filebeat.autodiscover:
@@ -29,6 +29,13 @@ daemonset:
                     "kubernetes.labels.app_kubernetes_io/name": "kubernetes-dashboard"
                 - equals:
                     "kubernetes.labels.app": "kibana"
+        - drop_event:
+          when:
+            and:
+              - equals:
+                  "kubernetes.labels.k8s-app": "calico"
+              - regexp:
+                  "message": "INFO"
 
 
       output.elasticsearch:
