@@ -29,18 +29,22 @@ daemonset:
                     "kubernetes.labels.app_kubernetes_io/name": "kubernetes-dashboard"
                 - equals:
                     "kubernetes.labels.app": "kibana"
+                - equals:
+                    "kubernetes.namespace": "sentry"
+                - equals:
+                    "kubernetes.namespace": "argocd"
         - drop_event:
             when:
               and:
                 - equals:
-                    "kubernetes.labels.k8s-app": "calico-node"
+                    "kubernetes.container.name": "calico-node"
                 - regexp:
                     "message": "INFO"
         - drop_event:
             when:
               and:
                 - equals:
-                    "kubernetes.labels.app": "logging-filebeat"
+                    "kubernetes.container.name": "logging-filebeat"
                 - regexp:
                     "message": "INFO"
 
