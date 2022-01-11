@@ -52,13 +52,9 @@ daemonset:
       output.elasticsearch:
         host: '${NODE_NAME}'
         hosts: '${ELASTICSEARCH_HOSTS:elasticsearch-master:9200}'
-        # indices:
-        #   - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
+        indices:
+          - index: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}"
       
-      setup.ilm.enabled: auto
-      setup.ilm.rollover_alias: "filebeat"
-      setup.ilm.pattern: "filebeat-%{[agent.version]}-%{[event.module]}-%{+yyyy.MM.dd}-000001"
-
       setup.dashboards.enabled: true
       setup.kibana:
         host: 'kibana-kibana:5601'
